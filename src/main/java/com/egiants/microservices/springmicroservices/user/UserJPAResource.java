@@ -22,6 +22,9 @@ import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
 public class UserJPAResource {
 
     @Autowired
+    private PostRepository postRepository;
+
+    @Autowired
     private UserDaoService service;
 
     @Autowired
@@ -41,7 +44,7 @@ public class UserJPAResource {
 
         if(!user.isPresent())
             throw new UserNotFoundException("id-" +id);
-        
+
         Resource<User> resource = new Resource<User>(user.get());
         ControllerLinkBuilder linkTo =
                 linkTo(methodOn(this.getClass()).
@@ -63,6 +66,39 @@ public class UserJPAResource {
                 .buildAndExpand(savedUser.getId()).toUri();
         return ResponseEntity.created(location).build();
 
+    }
+
+    @GetMapping("/jpa/users/{id}/posts")
+    public List<Post> retrieveAllUsers(@PathVariable int id){
+
+        Optional<User> user = userRepository.findById(id);
+
+        if(!user.isPresent()){
+            throw new UserNotFoundException("id-" +id);
+        }
+
+        return user.get().getPosts();
+    }
+
+    @PostMapping("jpa/users/{id}/posts")
+    public ResponseEntity<Object> createPosts(@PathVariable int id,@RequestBody Post post){
+
+        Optional<User> userOptional = userRepository.findById(id);
+
+        if(!userOptional.isPresent()){
+            throw new UserNotFoundException("id-" +id);
+        }
+        User user = userOptional.get();
+
+        post.setUser(user);
+        postRepository.save(post);
+
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(post.getId())
+                .toUri();
+        return ResponseEntity.created(location).build();
     }
 
     @DeleteMapping("/jpa/users/{id}")
